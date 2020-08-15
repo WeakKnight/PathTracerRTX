@@ -96,7 +96,7 @@ void PathTracer::CreateGBufferPipeline()
 void PathTracer::CreateRTPipeline()
 {
     RtProgram::Desc rtProgDesc;
-    rtProgDesc.addShaderLibrary("PathTracer/Raytracing.rt.slang").setRayGen("rayGen");
+    rtProgDesc.addShaderLibrary("PathTracer/Raytracing.rt.slang").setRayGen("RayGen");
     rtProgDesc.addHitGroup(0, "IndirectClosestHit", "IndirectAnyHit").addMiss(0, "IndirectMiss");
     rtProgDesc.addHitGroup(1, "", "ShadowAnyHit").addMiss(1, "ShadowMiss");
 
@@ -108,41 +108,6 @@ void PathTracer::CreateRTPipeline()
     m_RaytraceProgram->setScene(m_scene);
 
     CreateRTRenderTarget();
-}
-
-void PathTracer::CreateAORenderTarget()
-{
-    m_AORT = Texture::create2D(m_width, m_height, ResourceFormat::RGBA16Float, 1U, 1U, nullptr, ResourceBindFlags::UnorderedAccess | ResourceBindFlags::ShaderResource);
-}
-
-void PathTracer::CreateAOPipeline()
-{
-    RtProgram::Desc rtProgDesc;
-    rtProgDesc.addShaderLibrary("PathTracer/AOTracing.rt.slang").setRayGen("AoRayGen");
-    rtProgDesc.addHitGroup(0, "AoClosestHit", "AoAnyHit").addMiss(0, "AoMiss");
-    rtProgDesc.addDefines(m_scene->getSceneDefines());
-    rtProgDesc.setMaxTraceRecursionDepth(3); // 1 for calling TraceRay from RayGen, 1 for calling it from the primary-ray ClosestHitShader for reflections, 1 for reflection ray tracing a shadow ray
-
-    m_AOProgram = RtProgram::create(rtProgDesc);
-    m_AOVars = RtProgramVars::create(m_AOProgram, m_scene);
-    m_AOProgram->setScene(m_scene);
-
-    CreateAORenderTarget();
-}
-
-void PathTracer::AORender(RenderContext* pRenderContext)
-{
-    const float4 clearColor(0.0f, 0.0f, 0.0f, 0.0f);
-
-    m_AOVars["RayGenCB"]["gFrameCount"] = m_FrameCount++;
-    m_AOVars["RayGenCB"]["gAORadius"] = m_AORadius;
-    m_AOVars["RayGenCB"]["gMinT"] = 1.0e-4f;
-    m_AOVars["gPos"] = m_GBufferPositionRT;
-    m_AOVars["gNorm"] = m_GBufferNormalRT;
-    m_AOVars["gOutput"] = m_AORT;
-
-    pRenderContext->clearUAV(m_AORT->getUAV().get(), clearColor);
-    m_scene->raytrace(pRenderContext, m_AOProgram.get(), m_AOVars, uint3(m_width, m_height, 1));
 }
 
 void PathTracer::RaytraceRender(RenderContext* pRenderContext)
@@ -213,10 +178,6 @@ void PathTracer::onLoad(RenderContext* pRenderContext)
     m_width = SCREEN_WIDTH;
     m_height = SCREEN_HEIGHT;
 
-    auto now = std::chrono::high_resolution_clock::now();
-    auto msTime = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
-    m_Rng = std::mt19937(uint32_t(msTime.time_since_epoch().count()));
-
     // Global Samplers
     Sampler::Desc samplerDesc;
     samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Linear).setMaxAnisotropy(8);
@@ -268,8 +229,9 @@ void PathTracer::onGuiRender(Gui* pGui)
 
 void PathTracer::onFrameRender(RenderContext* pRenderContext, const Fbo::SharedPtr& pTargetFbo)
 {
-    float xJitter = (m_RngDist(m_Rng) - 0.5f) / m_width;
-    float yJitter = (m_RngDist(m_Rng) - 0.5f) / m_height;
+    float2 sampledPoint = m_haltonSampler.Sample();
+    float xJitter = (sampledPoint.x) / m_width;
+    float yJitter = (sampledPoint.y) / m_height;
     m_scene->getCamera()->setJitter(xJitter, yJitter);
     m_scene->update(pRenderContext, gpFramework->getGlobalClock().getTime());
 

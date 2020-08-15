@@ -58,7 +58,7 @@ struct ShadowRayData
     bool hit;
 };
 
-bool checkPointLightHit(uint lightIndex, float3 origin)
+bool CheckPointLightHit(uint lightIndex, float3 origin)
 {
     float3 direction = gScene.lights[lightIndex].posW - origin;
     RayDesc ray;
@@ -73,7 +73,7 @@ bool checkPointLightHit(uint lightIndex, float3 origin)
     return rayData.hit;
 }
 
-bool checkDirectionalLightHit(float3 direction, float3 origin)
+bool CheckDirectionalLightHit(float3 direction, float3 origin)
 {
     RayDesc ray;
     ray.Origin = origin;
@@ -87,7 +87,7 @@ bool checkDirectionalLightHit(float3 direction, float3 origin)
     return rayData.hit;
 }
 
-float3 shootIndirectRay(float3 orig, float3 dir, float minT, uint seed, uint depth)
+float3 ShootIndirectRay(float3 orig, float3 dir, float minT, uint seed, uint depth)
 {
     // Setup shadow ray
 	RayDesc rayColor;
@@ -104,16 +104,12 @@ float3 shootIndirectRay(float3 orig, float3 dir, float minT, uint seed, uint dep
 	return hitData.color.rgb;
 }
 
-float3 GGXDirectShading(uint randSeed, float3 posW, float3 N, float3 V, float3 albedo, float3 specular, float roughness)
+float3 GGXDirectShading(uint randSeed, uint i, float lightProb, float3 posW, float3 N, float3 V, float3 albedo, float3 specular, float roughness)
 {
     float3 result = 0.0;
 
     float NdotV = clamp(dot(N, V), 0.00001, 1.0);
 
-    // Direct Lighting
-    int lightCount = gScene.getLightCount();
-    int i = min( int(lightCount * rand_next(randSeed)), lightCount - 1 );
-    
     float3 radiance = 0.0;
 
     LightData light = gScene.getLight(i);
@@ -121,7 +117,7 @@ float3 GGXDirectShading(uint randSeed, float3 posW, float3 N, float3 V, float3 a
     float NdotL = 0.0;
     if (light.type == uint(LightType::Point))
     {
-        if (!checkPointLightHit(i, posW))
+        if (!CheckPointLightHit(i, posW))
         {
             float3 lightPosW = light.posW;
             L = normalize(lightPosW - posW);
@@ -135,7 +131,7 @@ float3 GGXDirectShading(uint randSeed, float3 posW, float3 N, float3 V, float3 a
     else if(light.type == uint(LightType::Directional))
     {
         L = -normalize(light.dirW);
-        if (!checkDirectionalLightHit(L, posW))
+        if (!CheckDirectionalLightHit(L, posW))
         {
             NdotL = saturate(dot(N, L));
             radiance += light.intensity;
@@ -156,8 +152,8 @@ float3 GGXDirectShading(uint randSeed, float3 posW, float3 N, float3 V, float3 a
     //     Cancel NdotL here to avoid catastrophic numerical precision issues.
     float3 ggxTerm = D*G*F / (4.0 * NdotV /* * NdotL */);
 
-    result += lightCount * ggxTerm * radiance;
-    result += lightCount * albedo * radiance * NdotL / M_PI;
+    result += ggxTerm * radiance / lightProb;
+    result += albedo * radiance * NdotL / M_PI / lightProb;
 
     return result;
 }
@@ -176,7 +172,7 @@ float3 GGXIndirectShading(uint randSeed, float3 posW, float3 N, float3 V, float3
         float3 bounceDir = getCosHemisphereSample(randSeed, N);
         float NdotLL = saturate(dot(N, bounceDir));
 
-        float3 bounceColor = shootIndirectRay(posW, bounceDir, gMinT, randSeed, depth);
+        float3 bounceColor = ShootIndirectRay(posW, bounceDir, gMinT, randSeed, depth);
         float sampleProb = NdotLL / M_PI;
         result += (NdotLL * bounceColor * albedo.rgb / M_PI) / max(sampleProb, 0.00001) / probDiffuse;
     }
@@ -188,7 +184,7 @@ float3 GGXIndirectShading(uint randSeed, float3 posW, float3 N, float3 V, float3
         float3 L = normalize(2.f * dot(V, H) * H - V);
 
         // Compute our color by tracing a ray in this direction
-        float3 bounceColor = shootIndirectRay(posW, L, gMinT, randSeed, depth);
+        float3 bounceColor = ShootIndirectRay(posW, L, gMinT, randSeed, depth);
 
         // Compute some dot products needed for shading
         float  NdotL = clamp(dot(N, L), 0.000001, 1.0);
@@ -273,7 +269,10 @@ void IndirectClosestHit(
 
     hitData.color.rgb = sd.emissive;
     
-    hitData.color.rgb += GGXDirectShading(hitData.randSeed, sd.posW, sd.N, sd.V, sd.diffuse.rgb, sd.specular.rgb, sd.linearRoughness);
+    int lightCount = gScene.getLightCount();
+    float lightProb = 1.0/lightCount;
+    int i = min( int(lightCount * rand_next(hitData.randSeed)), lightCount - 1 );
+    hitData.color.rgb += GGXDirectShading(hitData.randSeed, i, lightProb, sd.posW, sd.N, sd.V, sd.diffuse.rgb, sd.specular.rgb, sd.linearRoughness);
     
     if(hitData.depth < gMaxDepth)
     {
@@ -285,7 +284,7 @@ void IndirectClosestHit(
 }
 
 [shader("raygeneration")]
-void rayGen(
+void RayGen(
     uniform RWTexture2D<float4> gOutput)
 {
     uint3 launchIndex = DispatchRaysIndex();
@@ -307,7 +306,11 @@ void rayGen(
         result += emissive;
         float3 V = normalize(gScene.camera.getPosition());
         
-        result += GGXDirectShading(randSeed, posW, N, V, albedo.rgb, specular.rgb, specular.a);
+        int lightCount = gScene.getLightCount();
+        float lightProb = 1.0 / lightCount;
+        int i = min( int(lightCount * rand_next(randSeed)), lightCount - 1 );
+
+        result += GGXDirectShading(randSeed, i, lightProb, posW, N, V, albedo.rgb, specular.rgb, specular.a);
         result += GGXIndirectShading(randSeed, posW, N, V, albedo.rgb, specular.rgb, specular.a, 0);
     }
     else

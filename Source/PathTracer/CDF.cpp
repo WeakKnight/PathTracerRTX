@@ -14,10 +14,11 @@ void CDF::Init()
 }
 
 // rand from 0 to tatal, return the correspond id
-int CDF::Sample() const
+int CDF::Sample(float& pdf) const
 {
     if (cd.size() == 1)
     {
+        pdf = 1.0f;
         return 0;
     }
 
@@ -26,6 +27,7 @@ int CDF::Sample() const
     {
         if (random <= cd[i] && random >= cd[i - (size_t)1])
         {
+            pdf = (cd[i] - cd[i - (size_t)1])/total;
             return i - 1;
         }
     }

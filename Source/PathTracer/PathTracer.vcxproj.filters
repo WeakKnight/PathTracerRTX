@@ -3,17 +3,18 @@
   <ItemGroup>
     <ClCompile Include="CDF.cpp" />
     <ClCompile Include="PathTracer.cpp" />
+    <ClCompile Include="HaltonSampler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CDF.h" />
     <ClInclude Include="PathTracer.h" />
+    <ClInclude Include="HaltonSampler.h" />
   </ItemGroup>
   <ItemGroup>
     <ShaderSource Include="PostProcessing.ps.slang" />
     <ShaderSource Include="GBuffer.ps.slang" />
     <ShaderSource Include="Composite.ps.slang" />
     <ShaderSource Include="Raytracing.rt.slang" />
-    <ShaderSource Include="AOTracing.rt.slang" />
     <ShaderSource Include="Accumulation.ps.slang" />
   </ItemGroup>
 </Project>

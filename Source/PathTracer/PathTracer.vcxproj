@@ -12,10 +12,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CDF.cpp" />
+    <ClCompile Include="HaltonSampler.cpp" />
     <ClCompile Include="PathTracer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CDF.h" />
+    <ClInclude Include="HaltonSampler.h" />
     <ClInclude Include="PathTracer.h" />
   </ItemGroup>
   <ItemGroup>
@@ -24,7 +26,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ShaderSource Include="AOTracing.rt.slang" />
     <ShaderSource Include="Composite.ps.slang" />
     <ShaderSource Include="GBuffer.ps.slang" />
     <ShaderSource Include="PostProcessing.ps.slang" />

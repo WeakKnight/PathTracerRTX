@@ -27,6 +27,7 @@
  **************************************************************************/
 #pragma once
 #include "Falcor.h"
+#include "HaltonSampler.h"
 
 using namespace Falcor;
 
@@ -50,10 +51,6 @@ private:
     void CreateRTPipeline();
     void RaytraceRender(RenderContext* pRenderContext);
 
-    void CreateAORenderTarget();
-    void CreateAOPipeline();
-    void AORender(RenderContext* pRenderContext);
-
     void CreateAccumFBO();
     void CreateAccumPipeline();
 
@@ -63,9 +60,7 @@ private:
     void LoadScene();
 
 private:
-
-    std::uniform_real_distribution<float> m_RngDist;
-    std::mt19937                          m_Rng;
+    HaltonSampler                   m_haltonSampler;
 
     /*
     GBuffer
@@ -93,14 +88,6 @@ private:
     RtProgramVars::SharedPtr        m_RtVars;
     Texture::SharedPtr              m_RaytraceRT;
     uint32_t                        m_MaxDepth = 4;
-
-    /*
-    Ambient Occulusion
-    */
-    RtProgram::SharedPtr            m_AOProgram = nullptr;
-    RtProgramVars::SharedPtr        m_AOVars;
-    Texture::SharedPtr              m_AORT;
-    float                           m_AORadius = 10.0f;    // Our ambient occlusion radius
     uint32_t                        m_FrameCount = 0;     // Used for unique random seeds each frame
 
     /*
@@ -130,5 +117,6 @@ private:
     Scene::SharedPtr                m_scene;
     Sampler::SharedPtr              m_linearSampler;
     Sampler::SharedPtr              m_pointSampler;
+
     float m_width, m_height;
 };
