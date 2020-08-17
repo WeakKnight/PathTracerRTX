@@ -8,6 +8,7 @@ SamplerState _linearSampler : register( s0 );
 
 float3 ACESFilmic(float3 x)
 {
+    x = x * 0.6;
     const float a = 2.51;
     const float b = 0.03;
     const float c = 2.43;
@@ -28,6 +29,6 @@ float4 main(in float2 UV : TEXCOORD) : SV_TARGET
 {
     float3 lin = exposure * _texLinearResult.Sample( _linearSampler, UV).rgb;
     float3 toneColor = ACESFilmic(lin);
-    float3 result = LinearToSrgbBranchless(toneColor);
-    return float4(result, 1.0);
+    // float3 result = LinearToSrgbBranchless(toneColor);
+    return float4(toneColor, 1.0);
 }

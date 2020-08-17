@@ -40,7 +40,7 @@ static bool s_enableGBufferDebug = false;
 static int s_GBufferDebugType = 5;
 static const std::string s_defaultScene =
 "Arcade/Arcade.fscene";
-// "SunTemple/SunTemple.fscene";
+//"SunTemple/SunTemple.fscene";
 
 void PathTracer::LoadScene()
 {

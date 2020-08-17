@@ -124,3 +124,11 @@ float2 wsVectorToLatLong(float3 dir)
     float v = acos(p.y) * M_1_PI;
     return float2(u, v);
 }
+
+float PowerHeuristic(int numf, float fPdf, int numg, float gPdf) 
+{
+	float f = numf * fPdf;
+	float g = numg * gPdf;
+
+	return (f * f) / (f * f + g * g);
+}

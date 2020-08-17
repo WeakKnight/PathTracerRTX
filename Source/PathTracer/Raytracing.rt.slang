@@ -165,6 +165,11 @@ float3 GGXIndirectShading(uint randSeed, float3 posW, float3 N, float3 V, float3
 
     // Importance Sampling Indirect Light, Split Into Specular Or Diffuse
     float probDiffuse = probabilityToSampleDiffuse(albedo, specular);
+    float probSpecular = 1.0 - probDiffuse;
+
+    // float weightDiffuse = PowerHeuristic(1, probDiffuse, 1, probSpecular);
+    // float weightSpecular = PowerHeuristic(1, probSpecular, 1, probDiffuse);
+
     float chooseDiffuse = (rand_next(randSeed) < probDiffuse);
 
     if(chooseDiffuse)
@@ -202,7 +207,7 @@ float3 GGXIndirectShading(uint randSeed, float3 posW, float3 N, float3 V, float3
 
         // Accumulate color:  ggx-BRDF * lightIn * NdotL / probability-of-sampling
         //    -> Note: Should really cancel and simplify the math above
-        result += NdotL * bounceColor * ggxTerm / (ggxProb * (1.0f - probDiffuse));
+        result += NdotL * bounceColor * ggxTerm / (ggxProb * probSpecular);
     }
 
     return result;
@@ -259,8 +264,6 @@ void IndirectClosestHit(
     float3 rayDirW = WorldRayDirection();
     float hitT = RayTCurrent();
     uint triangleIndex = PrimitiveIndex();
-
-    // float3 posW = rayOrigW + hitT * rayDirW;
 
     // prepare the shading data
     VertexData v = getVertexData(hitParams, triangleIndex, attribs);

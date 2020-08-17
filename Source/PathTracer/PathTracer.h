@@ -87,11 +87,11 @@ private:
     RtProgram::SharedPtr            m_RaytraceProgram = nullptr;
     RtProgramVars::SharedPtr        m_RtVars;
     Texture::SharedPtr              m_RaytraceRT;
-    uint32_t                        m_MaxDepth = 4;
+    uint32_t                        m_MaxDepth = 0;
     uint32_t                        m_FrameCount = 0;     // Used for unique random seeds each frame
 
     /*
-    Ambient Occulusion Accumulation
+    Accumulation
     */
     Fbo::SharedPtr                  m_AccumFbo;
     Texture::SharedPtr              m_AccumRT;
